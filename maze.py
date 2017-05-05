@@ -83,6 +83,12 @@ class Maze:
                 if self.state == 'create' and not (self.maze_array[neighbor_cell] & WALL_BITS):
                     # add current cell to neighbors list - include index and COMPASS direction
                     neighbors.append((neighbor_cell, direction))
+                elif self.state == 'solve':
+                    # if no wall between current cell and new cell
+                    if (self.maze_array[neighbor_cell] & WALLS[direction]):  # & should be zero (no walls)
+                        # if new cell is not in the solution or in the backtrack path already
+                        if not (self.maze_array[neighbor_cell] & (BACKTRACK_BITS | SOLUTION_BITS)):
+                            neighbors.append((neighbor_cell, direction))
         return neighbors
 
     # Connect two cells by knocking down the wall between them
