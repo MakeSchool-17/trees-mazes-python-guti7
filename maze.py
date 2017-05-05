@@ -3,7 +3,7 @@ import sys
 
 # Screen size and cell size used by the maze window
 # Width and height of SCREEN_SIZE should be divisible by CELL_SIZE
-SCREEN_SIZE = (640, 480)
+SCREEN_SIZE = (640, 480)  # width x height
 CELL_SIZE = 32
 
 # Some useful numbers needed for the bit manipulation
@@ -12,19 +12,22 @@ CELL_SIZE = 32
 # From left to right, each 4 bit cluster represents W, S, E, N
 # NOTE: Border bits are not currently used
 #                   directions
-#                WSENWSENWSENWSEN
-DEFAULT_CELL = 0b0000000000000000
-#                |bt||s ||b ||w |
-WALL_BITS = 0b0000000000001111
+#                  WSENWSENWSENWSEN
+DEFAULT_CELL =   0b0000000000000000
+#                  |bt||s ||b ||w |
 BACKTRACK_BITS = 0b1111000000000000
-SOLUTION_BITS = 0b0000111100000000
+SOLUTION_BITS =  0b0000111100000000
+BORDER_BITS =    0b0000000011110000
+WALL_BITS =      0b0000000000001111
 
 # Indices match each other
 # WALLS[i] corresponds with COMPASS[i], DIRECTION[i], and OPPOSITE_WALLS[i]
-WALLS = [0b1000, 0b0100, 0b0010, 0b0001]
+WALLS =          [0b1000, 0b0100, 0b0010, 0b0001]
 OPPOSITE_WALLS = [0b0010, 0b0001, 0b1000, 0b0100]
-COMPASS = [(-1, 0), (0, 1), (1, 0), (0, -1)]
-DIRECTION = ['W', 'S', 'E', 'N']
+COMPASS =       [(-1, 0), (0, 1), (1, 0), (0, -1)]  # original
+# COMPASS =       [(-1, 0), (0, -1), (1, 0), (0, 1)]
+DIRECTION =      ['W', 'S', 'E', 'N']  # original
+# DIRECTION =      ['W', 'N', 'E', 'S']
 
 # Colors
 BLACK = (0, 0, 0, 255)
@@ -57,13 +60,43 @@ class Maze:
     # Return cell neighbors within bounds of the maze
     # Use self.state to determine which neighbors should be included
     def cell_neighbors(self, cell):
-        # TODO: Logic for getting neighbors based on self.state
-        pass
+        """
+        Takes a cell and returns its neighbors. Filters the neighbors
+        according to current state of the maze. During creation state,
+        the only neighbors we care about are those without any walls knocked down
+        this means the cell has not been visited.
+        """
+        # Logic for getting neighbors based on self.state
+        # empty list of neighbors
+        neighbors = []
+        # cell x, y values from index(cell location)
+        x, y = self.x_y(cell)
+        for direction in range(4): # four neighbors
+            # each iteration is a neighbor
+            # get new neighbor cell
+            new_x = x + COMPASS[direction][0]  # Compass stores W,S,E,N as (x: X, y: Y)
+            new_y = y + COMPASS[direction][1]
+            if self.cell_in_bounds(new_x, new_y):
+                # if current neighbor in this direction is in bounds
+                neighbor_cell = self.cell_index(new_x, new_y)
+                # if maze state is create and all current neighbor cell's wall are up:
+                if self.state == 'create' and not (self.maze_array[neighbor_cell] & WALL_BITS):
+                    # add current cell to neighbors list - include index and COMPASS direction
+                    neighbors.append((neighbor_cell, direction))
+        return neighbors
 
     # Connect two cells by knocking down the wall between them
     # Update wall bits of from_cell and to_cell
     def connect_cells(self, from_cell, to_cell, compass_index):
-        # TODO: Logic for updating cell bits
+        """
+            Updates the knocked down walls at from_cell and to_cell
+        """
+        # Logic for updating cell bits
+        # Use bitwise OR(|). Compares the bits betwen two numbers --
+        # Each bit of the output is 1 if either the corresponding bit
+        # of x or y is 1, otherwise 0.
+        self.maze_array[from_cell] |= WALLS[compass_index]
+        self.maze_array[to_cell] |= OPPOSITE_WALLS[compass_index]
         self.draw_connect_cells(from_cell, compass_index)
 
     # Visit a cell along a possible solution path
@@ -98,13 +131,13 @@ class Maze:
     def cell_index(self, x, y):
         return y * self.w_cells + x
 
-    # x, y values from a cell index
+    # x, y values from a cell index - 2D array position(grid)
     def x_y(self, index):
         x = index % self.w_cells
         y = int(index / self.w_cells)
         return x, y
 
-    # x, y point values from a cell index
+    # x, y point values from a cell index - cell position in drawn window.
     def x_y_pos(self, index):
         x, y = self.x_y(index)
         x_pos = x * CELL_SIZE
@@ -123,18 +156,18 @@ class Maze:
     # 'Knock down' wall between two cells, use in creation as walls removed
     def draw_connect_cells(self, from_cell, compass_index):
         x_pos, y_pos = self.x_y_pos(from_cell)
-        if compass_index == 0:
+        if compass_index == 0:  # WEST, knock down EAST
             pygame.draw.line(self.m_layer, NO_COLOR, (x_pos, y_pos + 1),
                              (x_pos, y_pos + CELL_SIZE - 1))
-        elif compass_index == 1:
+        elif compass_index == 1:  # SOUTH, knock down NORTH
             pygame.draw.line(self.m_layer, NO_COLOR, (x_pos + 1,
                              y_pos + CELL_SIZE), (x_pos + CELL_SIZE - 1,
                              y_pos + CELL_SIZE))
-        elif compass_index == 2:
+        elif compass_index == 2:  # EAST, knock down WEST
             pygame.draw.line(self.m_layer, NO_COLOR, (x_pos + CELL_SIZE,
                              y_pos + 1), (x_pos + CELL_SIZE,
                              y_pos + CELL_SIZE - 1))
-        elif compass_index == 3:
+        elif compass_index == 3:  # NORTH, knock down SOUTH
             pygame.draw.line(self.m_layer, NO_COLOR, (x_pos + 1, y_pos),
                              (x_pos + CELL_SIZE - 1, y_pos))
 
@@ -169,7 +202,7 @@ class Maze:
     def setup_maze_window(self):
         # Set up window and layers
         pygame.display.set_caption('Maze Generation and Solving')
-        pygame.mouse.set_visible(0)
+        pygame.mouse.set_visible(1)
         self.background = self.background.convert()
         self.background.fill(WHITE)
         self.m_layer = self.m_layer.convert_alpha()
