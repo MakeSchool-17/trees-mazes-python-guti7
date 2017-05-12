@@ -8,8 +8,9 @@ def create_dfs(m):
     # Create a backtracking stack
     cell_stack = []
     # Choose random cell for start - currentCell
-    random_int = random.randint(0, m.total_cells - 1)
-    current_cell = (m.maze_array[random_int], 0)
+    # random_int = random.randint(0, m.total_cells - 1)
+    # current_cell = (m.maze_array[random_int], 0)
+    current_cell = (0, 0)
     # update visitedCells + 1
     visited_cells = 1
 

@@ -85,7 +85,8 @@ class Maze:
                     neighbors.append((neighbor_cell, direction))
                 elif self.state == 'solve':
                     # if no wall between current cell and new cell
-                    if (self.maze_array[neighbor_cell] & WALLS[direction]):  # & should be zero (no walls)
+                    if (self.maze_array[neighbor_cell] & OPPOSITE_WALLS[direction]):
+                    # if (self.maze_array[neighbor_cell] & WALLS[direction]):  # & should be zero (no walls)
                         # if new cell is not in the solution or in the backtrack path already
                         if not (self.maze_array[neighbor_cell] & (BACKTRACK_BITS | SOLUTION_BITS)):
                             neighbors.append((neighbor_cell, direction))
@@ -109,12 +110,20 @@ class Maze:
     # Update solution bits of from_cell and backtrack bits of to_cell
     def visit_cell(self, from_cell, to_cell, compass_index):
         # TODO: Logic for updating cell bits
+        # Update solution bits from_cell -> add from_cell to the solution path(the current direction)
+        # Clear the solution bits out of from_cell
+        self.maze_array[from_cell] &= ~SOLUTION_BITS  # Solution bits in from_cell = 0000
+        self.maze_array[from_cell] |= (WALLS[compass_index] << 8)  # add current direction to solution
+        # Update backtrack bit to_cell -> add to_cell to backtrack path (the opposite of current direction)
+        self.maze_array[to_cell] |= (OPPOSITE_WALLS[compass_index] << 12 )
+
         self.draw_visited_cell(from_cell)
 
     # Backtrack from cell
     # Blank out the solution bits so it is no longer on the solution path
     def backtrack(self, cell):
         # TODO: Logic for updating cell bits
+        self.maze_array[cell] &= ~SOLUTION_BITS
         self.draw_backtracked_cell(cell)
 
     # Visit cell in BFS search
